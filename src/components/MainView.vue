@@ -12,7 +12,7 @@
       <div class="status">
         {{ questionIndex + 1 }} / {{ Modes[this.mode].questionsCount }}
       </div>
-      <div class="starting">
+      <div class="container">
         {{ questions[questionIndex].question.starting }}
       </div>
       <div v-if="questions[questionIndex].options.length > 0">
@@ -21,7 +21,7 @@
             <b>{{ option.title }}</b><br>{{ option.author }}
           </div>
         </div>
-        <div :class="{ button: true, disabled: optionId == null }" @click="checkAnswer" v-if="state === States.GAME">
+        <div :class="{ button: true, disabled: optionId == null }" @click="checkOptionAnswer" v-if="state === States.GAME">
           Ответить
         </div>
         <div :class="{ button: true }" @click="nextQuestion" v-if="state === States.SELECTED">
@@ -29,9 +29,22 @@
         </div>
       </div>
       <div v-else>
-        <input type="text" v-model="userInputTitle"/>
-        <input type="text" v-model="userInputAuthor"/>
-        
+        <div class="container">
+          <label>Название книги: </label>
+          <input type="text" v-model="userInputTitle" :class="{ 'green': state === States.SELECTED && comapareStrings(userInputTitle, questions[questionIndex].question.title),
+                                                                'red': state === States.SELECTED && !comapareStrings(userInputTitle, questions[questionIndex].question.title)
+            }"/><br>
+          <label>Автор: </label>
+          <input type="text" v-model="userInputAuthor" :class="{ 'green': state === States.SELECTED && comapareStrings(userInputAuthor, questions[questionIndex].question.author),
+                                                                 'red': state === States.SELECTED && !comapareStrings(userInputAuthor, questions[questionIndex].question.author) 
+          }"/>
+        </div>
+        <div :class="{ button: true, disabled: !(userInputTitle || userInputAuthor) }" @click="checkTextAnswer" v-if="state === States.GAME">
+          Ответить
+        </div>
+        <div :class="{ button: true }" @click="nextQuestion" v-if="state === States.SELECTED">
+          Следующий вопрос
+        </div>
       </div>
 
       <div class="good-message">
@@ -44,15 +57,15 @@
     </div>
 
     <div v-if="state === States.RESULTS">
-      <div class="results">
-      Вы ответили верно на {{ results.filter(x => x.result).length }} вопросов из {{ Modes[mode].questionsCount }}.
+      <div class="container">
+      Вы ответили верно на {{ results.filter(x => x.result > 1.9).length }} вопросов из {{ Modes[mode].questionsCount }}.
       <table>
         <tr><td>Вопрос</td><td>Ваш ответ</td><td>Верный ответ</td><td>Верно?</td></tr>
         <tr v-for="result in results" :key=result.answer.id>
           <td>{{ result.answer.starting.slice(0, 100) + '...' }}</td>
           <td><b>{{ result.userAnswer.title }}</b><br>{{ result.userAnswer.author }}</td>
           <td><b>{{ result.answer.title }}</b><br>{{ result.answer.author }}</td>
-          <td>{{ result.result ? '✔️' : '' }}</td>
+          <td>{{ result.result > 1.9 ? '✔️' : ( result.result > 0.9 ? '✔️❌' : '❌' ) }}</td>
         </tr>
       </table>
       </div>
@@ -63,7 +76,11 @@
 
 <script>
 import _ from 'underscore';
+import stringSimilarity from 'string-similarity';
+
 import BookData from '@/assets/final_data.json';
+
+const STRING_SIMILARITY_K = 0.5;
 
 export default {
   name: 'MainView',
@@ -79,8 +96,8 @@ export default {
       message: '',
       errorMessage: '',
 
-      userInputAuthor: null,
-      userInputTitle: null,
+      userInputAuthor: '',
+      userInputTitle: '',
       
       // Consts
       States: {
@@ -107,6 +124,14 @@ export default {
     this.state = this.States.MODESELECT;
   },
   methods: {
+    comapareStrings(first, second) {
+      if (second.includes(first) && first.length > 7) {
+        return true;
+      } else if (first.includes(second) && second.length > 7) {
+        return true;
+      }
+      return stringSimilarity.compareTwoStrings(first, second) > STRING_SIMILARITY_K;
+    },
     selectMode: function (mode) {
       this.mode = mode;
     },
@@ -129,11 +154,11 @@ export default {
       }
       this.state = this.States.GAME;
     },
-    checkAnswer: function () {
+    checkOptionAnswer: function () {
       this.results.push({
         answer: this.questions[this.questionIndex].question,
         userAnswer: this.questions[this.questionIndex].options.filter(x => x.id === this.optionId)[0],
-        result: this.questions[this.questionIndex].question.id === this.optionId
+        result: this.questions[this.questionIndex].question.id === this.optionId ? 2 : 0
       });
 
       if (this.questions[this.questionIndex].question.id === this.optionId) {
@@ -146,16 +171,45 @@ export default {
 
       this.state = this.States.SELECTED;
     },
+    checkTextAnswer: function () {
+      let q = this.questions[this.questionIndex].question;
+      let resultAuthor = this.comapareStrings(this.userInputAuthor, q.author);
+      let resultTitle = this.comapareStrings(this.userInputTitle, q.title);
+      
+      this.results.push({
+        answer: this.questions[this.questionIndex].question,
+        userAnswer: {
+          title: this.userInputTitle,
+          author: this.userInputAuthor,
+        },
+        result: resultTitle + resultAuthor
+      });
+
+      if (resultAuthor > STRING_SIMILARITY_K && resultTitle > STRING_SIMILARITY_K) {
+        this.message = `Верно! Ответ: ${q.title} ${q.author}`;
+      } else if (resultAuthor > STRING_SIMILARITY_K) {
+        this.errorMessage = `Вы отгадали только автора! Ответ: ${q.title} ${q.author}`;
+      } else if (resultTitle > STRING_SIMILARITY_K) {
+        this.errorMessage = `Вы отгадали только назавние книги! Ответ: ${q.title} ${q.author}`;
+      } else {
+        this.errorMessage = `Ваш ответ неверен! Ответ: ${q.title} ${q.author}`;
+      }
+
+      this.state = this.States.SELECTED;
+    },
     nextQuestion: function () {
       this.message = this.errorMessage = '';
       this.optionId = this.redOptionId = null;
+      this.userInputAuthor = this.userInputTitle = '';
 
       this.state = this.States.GAME;
       this.questionIndex++;
 
       if (this.questionIndex === this.Modes[this.mode].questionsCount) {
+        console.log(this.results);
         this.state = this.States.RESULTS;
       }
+      
     },
     restartGame: function () {
       this.message = this.errorMessage = '';
@@ -165,6 +219,7 @@ export default {
       this.questions = null;
       this.questionIndex = 0;
       this.results = [];
+      this.userInputAuthor = this.userInputTitle = '';
     }
   }
 }
@@ -189,12 +244,12 @@ export default {
   cursor: pointer;
 }
 
-.selected {
+.option.selected {
   border: 3px solid green;
   padding: 8px;
 }
 
-.red {
+.option.red {
   border: 3px solid red;
   padding: 8px;
 }
@@ -213,20 +268,12 @@ export default {
   margin: auto;
 }
 
-.starting {
+.container {
   max-width: 600px;
   text-align: left;
   margin: auto;
   border: 1px solid black;
   padding: 10px;
-  margin-bottom: 10px;
-}
-
-.results {
-  padding: 10px;
-  max-width: 800px;
-  /* border: 1px solid black; */
-  margin: auto;
   margin-bottom: 10px;
 }
 
@@ -241,6 +288,19 @@ export default {
 
 .results td {
   padding: 5px;
+}
+
+input {
+  width: 100%;
+  margin-right: 15px;
+}
+
+input.red {
+  border: 1px solid red;
+}
+
+input.green {
+  border: 1px solid green;
 }
 
 </style>
