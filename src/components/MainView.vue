@@ -13,7 +13,10 @@
         {{ questionIndex + 1 }} / {{ Modes[this.mode].questionsCount }}
       </div>
       <div class="container">
-        {{ questions[questionIndex].question.starting }}
+        <p v-for="p in questions[questionIndex].question.starting.split('\n')" :key="p.slice(0, 10)">
+          {{ p }}
+        </p>
+        <!-- {{ questions[questionIndex].question.starting }} -->
       </div>
       <div v-if="questions[questionIndex].options.length > 0">
         <div class="options">
