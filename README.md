@@ -1,24 +1,8 @@
-# book-guess
+# Угадай книгу по началу
 
-## Project setup
-```
-npm install
-```
+## Режимы
+1. Выбор из 4 вариантов
+2. Без вариантов ответа
 
-### Compiles and hot-reloads for development
-```
-npm run serve
-```
-
-### Compiles and minifies for production
-```
-npm run build
-```
-
-### Lints and fixes files
-```
-npm run lint
-```
-
-### Customize configuration
-See [Configuration Reference](https://cli.vuejs.org/config/).
+## Настройки
+1. Коэффициент схожести
