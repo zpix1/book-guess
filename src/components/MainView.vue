@@ -19,7 +19,7 @@
       <div class="status">
         {{ questionIndex + 1 }} / {{ Modes[this.mode].questionsCount }}
       </div>
-      <div class="container">
+      <div class="container starting">
         <p v-for="p in questions[questionIndex].question.starting.split('\n')" :key="p.slice(0, 100)">
           {{ p }}
         </p>
@@ -243,6 +243,10 @@ export default {
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Roboto&family=Roboto+Slab&display=swap');
+
+
+
 .options {
   display: flex;
   flex-direction: row;
@@ -293,6 +297,10 @@ export default {
   border: 1px solid black;
   padding: 10px;
   margin-bottom: 10px;
+}
+
+.starting {
+  font-family: 'Roboto Slab', serif;
 }
 
 .results table {
