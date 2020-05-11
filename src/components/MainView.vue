@@ -6,6 +6,13 @@
         <div :class="{ option: true, selected: mode === key}" v-for="(obj, key) in Modes" :key="key" @click="selectMode(key)">{{ obj.desc }}</div>
       </div>
       <div :class="{ button: true, disabled: mode === null }" @click="startGame">Продолжить</div>
+      <div class="container">
+        <h3>Состояние базы</h3>
+        Число книг: {{ dbState.total }}<br>
+        Число поэм: {{ dbState.verses }}<br>
+        Число пьес: {{ dbState.plays }}<br>
+        Коэффициент сходства: {{ dbState.k }}
+      </div>
     </div>
     
     <div v-if="state === States.GAME || state === States.SELECTED">
@@ -13,14 +20,14 @@
         {{ questionIndex + 1 }} / {{ Modes[this.mode].questionsCount }}
       </div>
       <div class="container">
-        <p v-for="p in questions[questionIndex].question.starting.split('\n')" :key="p.slice(0, 10)">
+        <p v-for="p in questions[questionIndex].question.starting.split('\n')" :key="p.slice(0, 100)">
           {{ p }}
         </p>
         <!-- {{ questions[questionIndex].question.starting }} -->
       </div>
       <div v-if="questions[questionIndex].options.length > 0">
         <div class="options">
-          <div :class="{ option: true, selected: optionId === option.id, red: redOptionId === option.id, disabled: state === States.SELECTED}" v-for="option in questions[questionIndex].options" :key="option.id" @click="selectOption(option)">
+          <div :class="{ option: true, selected: optionId === option.id, red: redOptionId === option.id, disabled: state === States.SELECTED}" v-for="option in questions[questionIndex].options" :key="option.id + option.title" @click="selectOption(option)">
             <b>{{ option.title }}</b><br>{{ option.author }}
           </div>
         </div>
@@ -64,7 +71,7 @@
       Вы ответили верно на {{ results.filter(x => x.result > 1.9).length }} вопросов из {{ Modes[mode].questionsCount }}.
       <table>
         <tr><td>Вопрос</td><td>Ваш ответ</td><td>Верный ответ</td><td>Верно?</td></tr>
-        <tr v-for="result in results" :key=result.answer.id>
+        <tr v-for="result in results" :key="result.answer.id">
           <td>{{ result.answer.starting.slice(0, 100) + '...' }}</td>
           <td><b>{{ result.userAnswer.title }}</b><br>{{ result.userAnswer.author }}</td>
           <td><b>{{ result.answer.title }}</b><br>{{ result.answer.author }}</td>
@@ -101,6 +108,8 @@ export default {
 
       userInputAuthor: '',
       userInputTitle: '',
+
+      dbState: {},
       
       // Consts
       States: {
@@ -125,6 +134,11 @@ export default {
   },
   mounted: function () {
     this.state = this.States.MODESELECT;
+
+    this.dbState.total = BookData.length;
+    this.dbState.verses = BookData.filter(x => x.type === 'v').length;
+    this.dbState.plays = BookData.filter(x => x.type === 'p').length;
+    this.dbState.k = STRING_SIMILARITY_K;
   },
   methods: {
     comapareStrings(first, second) {
@@ -152,7 +166,7 @@ export default {
       for (let i = 0; i < questionsCount; i++) {
         this.questions.push({
           question: questions[i],
-          options: optionsCount === 0 ? [] : _.shuffle((_.sample(BookData.filter(b => b.id != questions[i].id), optionsCount - 1)).concat(questions[i]))
+          options: optionsCount === 0 ? [] : _.shuffle((_.sample(BookData.filter(b => b.id != questions[i].id && b.type === questions[i].type), optionsCount - 1)).concat(questions[i]))
         })
       }
       this.state = this.States.GAME;
@@ -269,6 +283,7 @@ export default {
   border: 1px solid black;
   max-width: 150px;
   margin: auto;
+  margin-bottom: 10px;
 }
 
 .container {
