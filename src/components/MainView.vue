@@ -20,7 +20,7 @@
         {{ questionIndex + 1 }} / {{ Modes[this.mode].questionsCount }}
       </div>
       <div class="container starting">
-        <p v-for="p in questions[questionIndex].question.starting.split('\n')" :key="p.slice(0, 100)">
+        <p v-for="(p,i) in questions[questionIndex].question.starting.split('\n')" :key="i+p.slice(0, 100)">
           {{ p }}
         </p>
         <!-- {{ questions[questionIndex].question.starting }} -->
@@ -223,7 +223,6 @@ export default {
       this.questionIndex++;
 
       if (this.questionIndex === this.Modes[this.mode].questionsCount) {
-        console.log(this.results);
         this.state = this.States.RESULTS;
       }
       
@@ -244,8 +243,6 @@ export default {
 
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Roboto&family=Roboto+Slab&display=swap');
-
-
 
 .options {
   display: flex;
